@@ -1,0 +1,2689 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>ポケットモンスター 赤 3D (Pokemon Red 3D MVP)</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DotGothic16&family=Press+Start+2P&display=swap" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <style>
+    :root {
+      --gb-red: #c42828;
+      --gb-dark-red: #7e1212;
+      --gb-bg: #e0f8d0;
+      --gb-frame: #303030;
+      --gb-border: #222222;
+      --gb-panel: #f8f8f8;
+      --gb-text: #1a1a1a;
+      --gb-accent: #e74c3c;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+      -webkit-user-select: none;
+      -webkit-touch-callout: none;
+    }
+
+    body, html {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: #111;
+      font-family: 'DotGothic16', 'Press Start 2P', monospace, sans-serif;
+      color: var(--gb-text);
+    }
+
+    #app {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      width: 100vw;
+      height: 100vh;
+      background: radial-gradient(circle at center, #2a0808 0%, #0d0202 100%);
+      position: relative;
+    }
+
+    /* Game Console Frame Container */
+    #console-wrapper {
+      position: relative;
+      width: 100%;
+      max-width: 820px;
+      height: 100%;
+      max-height: 980px;
+      display: flex;
+      flex-direction: column;
+      background: #8b0000;
+      border-radius: 20px;
+      box-shadow: 0 20px 50px rgba(0,0,0,0.8), inset 0 3px 6px rgba(255,255,255,0.2), inset 0 -6px 12px rgba(0,0,0,0.5);
+      border: 4px solid #5a0000;
+      padding: 16px 16px 20px;
+      overflow: hidden;
+    }
+
+    @media (max-width: 600px) {
+      #console-wrapper {
+        border-radius: 0;
+        border: none;
+        padding: 6px;
+        max-height: 100%;
+      }
+    }
+
+    /* Top Console Header */
+    #console-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 2px 10px 10px;
+      color: #ffd700;
+      font-size: 13px;
+      font-weight: bold;
+      text-shadow: 1px 1px 2px #000;
+      letter-spacing: 1px;
+    }
+
+    .brand-text {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .brand-badge {
+      background: #fff;
+      color: #c42828;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-size: 10px;
+    }
+
+    .header-buttons {
+      display: flex;
+      gap: 8px;
+    }
+
+    .hdr-btn {
+      background: #333;
+      color: #fff;
+      border: 2px solid #555;
+      padding: 4px 10px;
+      border-radius: 6px;
+      font-size: 11px;
+      cursor: pointer;
+      font-family: inherit;
+    }
+    .hdr-btn:hover {
+      background: #555;
+    }
+
+    /* Screen Bezel */
+    #screen-bezel {
+      position: relative;
+      flex: 1;
+      min-height: 280px;
+      background: #232323;
+      border-radius: 12px 12px 30px 12px;
+      padding: 12px;
+      box-shadow: inset 0 4px 10px rgba(0,0,0,0.8);
+      display: flex;
+      flex-direction: column;
+    }
+
+    #screen-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding-bottom: 6px;
+      font-size: 10px;
+      color: #888;
+    }
+
+    .battery-indicator {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .battery-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #ff2222;
+      box-shadow: 0 0 6px #ff2222;
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
+
+    /* Screen Canvas Frame */
+    #screen-container {
+      position: relative;
+      flex: 1;
+      background: #000;
+      border-radius: 6px;
+      overflow: hidden;
+      border: 3px solid #111;
+      box-shadow: inset 0 0 15px rgba(0,0,0,0.6);
+    }
+
+    #viewport-canvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    /* Scanline effect */
+    .scanlines {
+      position: absolute;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%);
+      background-size: 100% 4px;
+      pointer-events: none;
+      z-index: 10;
+      opacity: 0.6;
+    }
+
+    /* UI Overlays */
+    .overlay-ui {
+      position: absolute;
+      top: 0; left: 0; right: 0; bottom: 0;
+      pointer-events: none;
+      z-index: 20;
+    }
+
+    /* Dialog Box (Field & General) */
+    #dialog-box {
+      position: absolute;
+      bottom: 8px;
+      left: 8px;
+      right: 8px;
+      background: #fff;
+      border: 4px double #222;
+      border-radius: 4px;
+      padding: 12px 14px;
+      font-size: 15px;
+      line-height: 1.6;
+      color: #111;
+      display: none;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+      pointer-events: auto;
+    }
+
+    #dialog-text {
+      min-height: 48px;
+      white-space: pre-wrap;
+    }
+
+    .dialog-arrow {
+      position: absolute;
+      bottom: 6px;
+      right: 12px;
+      width: 0; 
+      height: 0; 
+      border-left: 6px solid transparent;
+      border-right: 6px solid transparent;
+      border-top: 8px solid #222;
+      animation: bounce 0.6s infinite alternate;
+      display: none;
+    }
+
+    @keyframes bounce {
+      from { transform: translateY(0); }
+      to { transform: translateY(4px); }
+    }
+
+    /* Field HUD */
+    #field-hud {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      display: flex;
+      gap: 6px;
+      flex-direction: column;
+    }
+
+    .hud-badge {
+      background: rgba(0,0,0,0.7);
+      color: #fff;
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 11px;
+      border: 1px solid #555;
+    }
+
+    /* Start Menu (Field) */
+    #start-menu {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      width: 140px;
+      background: #fff;
+      border: 4px double #222;
+      border-radius: 4px;
+      display: none;
+      pointer-events: auto;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.6);
+    }
+
+    .menu-item {
+      padding: 8px 12px;
+      font-size: 13px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      border-bottom: 1px solid #eee;
+    }
+    .menu-item:last-child {
+      border-bottom: none;
+    }
+    .menu-item:hover, .menu-item.active {
+      background: #fee;
+      color: var(--gb-red);
+      font-weight: bold;
+    }
+    .menu-cursor {
+      visibility: hidden;
+    }
+    .menu-item:hover .menu-cursor, .menu-item.active .menu-cursor {
+      visibility: visible;
+    }
+
+    /* Battle Screen UI */
+    #battle-ui {
+      position: absolute;
+      top: 0; left: 0; right: 0; bottom: 0;
+      display: none;
+      flex-direction: column;
+      justify-content: space-between;
+      padding: 12px;
+      pointer-events: auto;
+    }
+
+    /* Enemy HUD */
+    .pokemon-hud {
+      background: rgba(255,255,255,0.92);
+      border: 3px double #222;
+      border-radius: 6px;
+      padding: 6px 12px;
+      width: 210px;
+      box-shadow: 2px 3px 6px rgba(0,0,0,0.4);
+    }
+
+    .enemy-hud {
+      align-self: flex-start;
+      margin-top: 8px;
+      margin-left: 8px;
+    }
+
+    .player-hud {
+      align-self: flex-end;
+      margin-right: 8px;
+      margin-bottom: 110px;
+    }
+
+    .hud-name-level {
+      display: flex;
+      justify-content: space-between;
+      font-size: 13px;
+      font-weight: bold;
+      margin-bottom: 4px;
+    }
+
+    .hud-hp-bar-container {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: #333;
+      padding: 2px 4px;
+      border-radius: 4px;
+    }
+
+    .hp-label {
+      color: #ffd700;
+      font-size: 9px;
+      font-weight: bold;
+    }
+
+    .hp-track {
+      flex: 1;
+      height: 8px;
+      background: #555;
+      border-radius: 4px;
+      overflow: hidden;
+      border: 1px solid #111;
+    }
+
+    .hp-fill {
+      width: 100%;
+      height: 100%;
+      background: #2ecc71;
+      transition: width 0.4s ease, background 0.3s ease;
+    }
+
+    .hud-hp-val {
+      text-align: right;
+      font-size: 11px;
+      margin-top: 2px;
+      font-weight: bold;
+    }
+
+    /* Battle Bottom Panel */
+    #battle-bottom-panel {
+      position: absolute;
+      bottom: 8px;
+      left: 8px;
+      right: 8px;
+      height: 100px;
+      background: #fff;
+      border: 4px double #222;
+      border-radius: 6px;
+      display: flex;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+      overflow: hidden;
+    }
+
+    #battle-log {
+      flex: 1.3;
+      padding: 10px 12px;
+      font-size: 13px;
+      line-height: 1.5;
+      border-right: 3px double #222;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+
+    #battle-actions {
+      flex: 1;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      grid-template-rows: 1fr 1fr;
+      gap: 2px;
+      padding: 4px;
+      background: #f0f0f0;
+    }
+
+    .btn-action {
+      background: #fff;
+      border: 2px solid #333;
+      border-radius: 4px;
+      font-family: inherit;
+      font-size: 13px;
+      font-weight: bold;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.1s;
+    }
+    .btn-action:hover, .btn-action.active {
+      background: #ffdddd;
+      color: var(--gb-red);
+      border-color: var(--gb-red);
+    }
+
+    #battle-moves {
+      flex: 1;
+      display: none;
+      grid-template-columns: 1fr 1fr;
+      grid-template-rows: 1fr 1fr;
+      gap: 2px;
+      padding: 4px;
+      background: #f0f0f0;
+    }
+
+    .btn-move {
+      background: #fff;
+      border: 2px solid #333;
+      border-radius: 4px;
+      font-family: inherit;
+      font-size: 12px;
+      font-weight: bold;
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 2px;
+    }
+    .btn-move:hover {
+      background: #ffdddd;
+      color: var(--gb-red);
+      border-color: var(--gb-red);
+    }
+    .move-pp {
+      font-size: 9px;
+      color: #666;
+    }
+
+    /* Screen Flash FX */
+    #screen-flash {
+      position: absolute;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: #fff;
+      opacity: 0;
+      pointer-events: none;
+      z-index: 30;
+      transition: opacity 0.1s;
+    }
+
+    /* Physical Controls Section */
+    #controls-section {
+      margin-top: 14px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0 10px;
+    }
+
+    /* D-Pad */
+    .dpad-container {
+      position: relative;
+      width: 130px;
+      height: 130px;
+    }
+
+    .dpad-btn {
+      position: absolute;
+      background: #252525;
+      border: 2px solid #111;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #666;
+      font-size: 14px;
+      user-select: none;
+      box-shadow: 0 3px 6px rgba(0,0,0,0.5);
+    }
+    .dpad-btn:active, .dpad-btn.pressed {
+      background: #151515;
+      color: #fff;
+      transform: translateY(1px);
+    }
+
+    .dpad-up {
+      top: 0; left: 45px;
+      width: 40px; height: 45px;
+      border-radius: 6px 6px 0 0;
+    }
+    .dpad-down {
+      bottom: 0; left: 45px;
+      width: 40px; height: 45px;
+      border-radius: 0 0 6px 6px;
+    }
+    .dpad-left {
+      top: 45px; left: 0;
+      width: 45px; height: 40px;
+      border-radius: 6px 0 0 6px;
+    }
+    .dpad-right {
+      top: 45px; right: 0;
+      width: 45px; height: 40px;
+      border-radius: 0 6px 6px 0;
+    }
+    .dpad-center {
+      top: 45px; left: 45px;
+      width: 40px; height: 40px;
+      background: #252525;
+      border: none;
+      box-shadow: none;
+    }
+
+    /* Middle Start/Select */
+    .middle-btns {
+      display: flex;
+      gap: 16px;
+      transform: rotate(-25deg);
+      margin-top: 30px;
+    }
+
+    .pill-btn-group {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .pill-btn {
+      width: 48px;
+      height: 12px;
+      background: #444;
+      border-radius: 6px;
+      border: 1px solid #222;
+      cursor: pointer;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.6);
+    }
+    .pill-btn:active {
+      background: #222;
+    }
+
+    .pill-label {
+      font-size: 9px;
+      color: #ffd700;
+      font-weight: bold;
+      letter-spacing: 1px;
+    }
+
+    /* Action Buttons (A & B) */
+    .action-btns {
+      display: flex;
+      gap: 16px;
+      transform: rotate(-25deg);
+    }
+
+    .round-btn-group {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .round-btn {
+      width: 52px;
+      height: 52px;
+      background: #8b0000;
+      border-radius: 50%;
+      border: 3px solid #4a0000;
+      box-shadow: 0 5px 8px rgba(0,0,0,0.6), inset 0 2px 4px rgba(255,255,255,0.3);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+      font-weight: bold;
+      font-size: 16px;
+    }
+    .round-btn:active, .round-btn.pressed {
+      transform: translateY(2px);
+      box-shadow: 0 2px 4px rgba(0,0,0,0.6);
+      background: #6a0000;
+    }
+
+    .round-label {
+      font-size: 11px;
+      font-weight: bold;
+      color: #ffd700;
+    }
+
+    /* Modals */
+    .modal {
+      position: absolute;
+      top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      width: 88%;
+      max-width: 420px;
+      background: #fff;
+      border: 4px double #222;
+      border-radius: 8px;
+      padding: 16px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.8);
+      z-index: 50;
+      display: none;
+      pointer-events: auto;
+    }
+
+    .modal-title {
+      font-size: 15px;
+      font-weight: bold;
+      margin-bottom: 12px;
+      color: var(--gb-red);
+      border-bottom: 2px solid #eee;
+      padding-bottom: 6px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .modal-close {
+      cursor: pointer;
+      font-size: 14px;
+      color: #888;
+    }
+    .modal-close:hover {
+      color: #000;
+    }
+
+    .modal-content {
+      font-size: 12px;
+      line-height: 1.7;
+    }
+
+    .pkmn-card {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: #f7f7f7;
+      border: 1px solid #ddd;
+      padding: 8px 12px;
+      border-radius: 4px;
+      margin-bottom: 6px;
+    }
+
+    /* Notification toast */
+    #toast {
+      position: absolute;
+      top: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(0,0,0,0.85);
+      color: #fff;
+      padding: 8px 16px;
+      border-radius: 20px;
+      font-size: 12px;
+      z-index: 60;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.3s;
+    }
+  </style>
+</head>
+<body>
+  <div id="app">
+    <div id="console-wrapper">
+      <!-- Header -->
+      <div id="console-header">
+        <div class="brand-text">
+          <span>GAME BOY</span>
+          <span class="brand-badge">COLOR 3D</span>
+        </div>
+        <div class="header-buttons">
+          <button id="btn-sound-toggle" class="hdr-btn" title="サウンド切り替え">🔊 BGM ON</button>
+          <button id="btn-help-toggle" class="hdr-btn" title="操作ヘルプ">？ 操作説明</button>
+        </div>
+      </div>
+
+      <!-- Bezel & Screen -->
+      <div id="screen-bezel">
+        <div id="screen-header">
+          <div class="battery-indicator">
+            <div class="battery-dot"></div>
+            <span>POWER</span>
+          </div>
+          <div>POKEMON RED 3D MVP</div>
+        </div>
+
+        <div id="screen-container">
+          <div class="scanlines"></div>
+          <div id="screen-flash"></div>
+          <canvas id="viewport-canvas"></canvas>
+
+          <!-- Field Overlays -->
+          <div id="field-overlay" class="overlay-ui">
+            <div id="field-hud">
+              <div class="hud-badge" id="hud-location">📍 マサラタウン</div>
+              <div class="hud-badge" id="hud-balls">⚪ モンスターボール: 5個</div>
+            </div>
+
+            <div id="start-menu">
+              <div class="menu-item" data-action="pokemon"><span class="menu-cursor">▶</span>ポケモン</div>
+              <div class="menu-item" data-action="bag"><span class="menu-cursor">▶</span>どうぐ</div>
+              <div class="menu-item" data-action="save"><span class="menu-cursor">▶</span>レポート</div>
+              <div class="menu-item" data-action="close"><span class="menu-cursor">▶</span>とじる</div>
+            </div>
+
+            <div id="dialog-box">
+              <div id="dialog-text"></div>
+              <div class="dialog-arrow" id="dialog-arrow"></div>
+            </div>
+          </div>
+
+          <!-- Battle Overlays -->
+          <div id="battle-ui">
+            <!-- Enemy HUD -->
+            <div class="pokemon-hud enemy-hud">
+              <div class="hud-name-level">
+                <span id="enemy-name">ポッポ</span>
+                <span id="enemy-level">Lv.3</span>
+              </div>
+              <div class="hud-hp-bar-container">
+                <span class="hp-label">HP</span>
+                <div class="hp-track">
+                  <div class="hp-fill" id="enemy-hp-bar"></div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Player HUD -->
+            <div class="pokemon-hud player-hud">
+              <div class="hud-name-level">
+                <span id="player-pkmn-name">ヒトカゲ</span>
+                <span id="player-pkmn-level">Lv.5</span>
+              </div>
+              <div class="hud-hp-bar-container">
+                <span class="hp-label">HP</span>
+                <div class="hp-track">
+                  <div class="hp-fill" id="player-hp-bar"></div>
+                </div>
+              </div>
+              <div class="hud-hp-val" id="player-hp-text">22 / 22</div>
+            </div>
+
+            <!-- Battle Bottom Control Panel -->
+            <div id="battle-bottom-panel">
+              <div id="battle-log">あ！ やせいの ポッポが とびだしてきた！</div>
+              
+              <!-- Main Actions -->
+              <div id="battle-actions">
+                <button class="btn-action" id="btn-fight">たたかう</button>
+                <button class="btn-action" id="btn-bag">バッグ</button>
+                <button class="btn-action" id="btn-pkmn">ポケモン</button>
+                <button class="btn-action" id="btn-run">にげる</button>
+              </div>
+
+              <!-- Moves List -->
+              <div id="battle-moves">
+                <button class="btn-move" id="btn-move-0">
+                  <span class="move-name">ひのこ</span>
+                  <span class="move-pp">PP 25/25</span>
+                </button>
+                <button class="btn-move" id="btn-move-1">
+                  <span class="move-name">ひっかき</span>
+                  <span class="move-pp">PP 35/35</span>
+                </button>
+                <button class="btn-move" id="btn-move-2">
+                  <span class="move-name">たいあたり</span>
+                  <span class="move-pp">PP 35/35</span>
+                </button>
+                <button class="btn-move" id="btn-move-3">
+                  <span class="move-name">もどる</span>
+                  <span class="move-pp">-</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Controls -->
+      <div id="controls-section">
+        <!-- D-Pad -->
+        <div class="dpad-container">
+          <button class="dpad-btn dpad-up" id="btn-up">▲</button>
+          <button class="dpad-btn dpad-left" id="btn-left">◀</button>
+          <div class="dpad-center"></div>
+          <button class="dpad-btn dpad-right" id="btn-right">▶</button>
+          <button class="dpad-btn dpad-down" id="btn-down">▼</button>
+        </div>
+
+        <!-- Start / Select -->
+        <div class="middle-btns">
+          <div class="pill-btn-group">
+            <button class="pill-btn" id="btn-select"></button>
+            <span class="pill-label">SELECT</span>
+          </div>
+          <div class="pill-btn-group">
+            <button class="pill-btn" id="btn-start"></button>
+            <span class="pill-label">START</span>
+          </div>
+        </div>
+
+        <!-- A & B Buttons -->
+        <div class="action-btns">
+          <div class="round-btn-group" style="margin-top: 18px;">
+            <button class="round-btn" id="btn-b">B</button>
+            <span class="round-label">B</span>
+          </div>
+          <div class="round-btn-group">
+            <button class="round-btn" id="btn-a">A</button>
+            <span class="round-label">A</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modals -->
+    <div id="help-modal" class="modal">
+      <div class="modal-title">
+        <span>🎮 操作説明</span>
+        <span class="modal-close" id="help-close">✕</span>
+      </div>
+      <div class="modal-content">
+        <p><strong>【キーボード操作】</strong></p>
+        <p>・移動: 矢印キー または W / A / S / D</p>
+        <p>・Aボタン (決定・調べる・話す): Z または J または Enter</p>
+        <p>・Bボタン (キャンセル・走る): X または K または Shift</p>
+        <p>・STARTボタン (メニュー開閉): C または Escape</p>
+        <br>
+        <p><strong>【遊び方】</strong></p>
+        <p>1. マサラタウンを探索してオーキド博士や看板を調べよう！</p>
+        <p>2. 北の草むらに入ると野生ポケモン（ポッポ、コラッタ、ピカチュウ）が出現！</p>
+        <p>3. バトルで「たたかう」や「バッグ」からモンスターボールを使って捕獲しよう！</p>
+        <p>4. 傷ついたら自宅のママに話しかけると全回復するぞ！</p>
+      </div>
+    </div>
+
+    <div id="pokemon-modal" class="modal">
+      <div class="modal-title">
+        <span>手持ちのポケモン</span>
+        <span class="modal-close" id="pkmn-modal-close">✕</span>
+      </div>
+      <div class="modal-content" id="pokemon-list-content">
+        <!-- populated dynamically -->
+      </div>
+    </div>
+
+    <div id="toast">セーブしました！</div>
+  </div>
+
+  <script>
+    /* ==========================================================================
+       1. SOUND SYSTEM (Web Audio API Synthesizer - 8-Bit Chiptune)
+       ========================================================================== */
+    class RetroSoundSystem {
+      constructor() {
+        this.ctx = null;
+        this.enabled = true;
+        this.bgmGain = null;
+        this.sfxGain = null;
+        this.currentBgm = null;
+        this.bgmTimer = null;
+        this.step = 0;
+      }
+
+      init() {
+        if (this.ctx) return;
+        const AudioCtx = window.AudioContext || window.webkitAudioContext;
+        this.ctx = new AudioCtx();
+
+        this.bgmGain = this.ctx.createGain();
+        this.bgmGain.gain.setValueAtTime(0.15, this.ctx.currentTime);
+        this.bgmGain.connect(this.ctx.destination);
+
+        this.sfxGain = this.ctx.createGain();
+        this.sfxGain.gain.setValueAtTime(0.25, this.ctx.currentTime);
+        this.sfxGain.connect(this.ctx.destination);
+      }
+
+      toggleSound() {
+        this.enabled = !this.enabled;
+        if (!this.ctx) this.init();
+        if (this.ctx.state === 'suspended') this.ctx.resume();
+
+        if (this.bgmGain) {
+          this.bgmGain.gain.setValueAtTime(this.enabled ? 0.15 : 0, this.ctx.currentTime);
+        }
+        if (this.sfxGain) {
+          this.sfxGain.gain.setValueAtTime(this.enabled ? 0.25 : 0, this.ctx.currentTime);
+        }
+        return this.enabled;
+      }
+
+      playTone(freq, duration, type = 'square', time = 0) {
+        if (!this.enabled || !this.ctx) return;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = type;
+        osc.frequency.setValueAtTime(freq, this.ctx.currentTime + time);
+
+        gain.gain.setValueAtTime(0.3, this.ctx.currentTime + time);
+        gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + time + duration);
+
+        osc.connect(gain);
+        gain.connect(this.sfxGain);
+        osc.start(this.ctx.currentTime + time);
+        osc.stop(this.ctx.currentTime + time + duration);
+      }
+
+      playNoise(duration, time = 0) {
+        if (!this.enabled || !this.ctx) return;
+        const bufferSize = this.ctx.sampleRate * duration;
+        const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+        const data = buffer.getChannelData(0);
+        for (let i = 0; i < bufferSize; i++) {
+          data[i] = Math.random() * 2 - 1;
+        }
+
+        const noise = this.ctx.createBufferSource();
+        noise.buffer = buffer;
+        const gain = this.ctx.createGain();
+        gain.gain.setValueAtTime(0.3, this.ctx.currentTime + time);
+        gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + time + duration);
+
+        noise.connect(gain);
+        gain.connect(this.sfxGain);
+        noise.start(this.ctx.currentTime + time);
+      }
+
+      // SFX Presets
+      sfxSelect() {
+        this.init();
+        this.playTone(880, 0.05, 'square');
+      }
+
+      sfxConfirm() {
+        this.init();
+        this.playTone(587.33, 0.05, 'square', 0);
+        this.playTone(880, 0.08, 'square', 0.05);
+      }
+
+      sfxCancel() {
+        this.init();
+        this.playTone(440, 0.05, 'square', 0);
+        this.playTone(330, 0.08, 'square', 0.05);
+      }
+
+      sfxEncounter() {
+        this.init();
+        for (let i = 0; i < 8; i++) {
+          this.playTone(400 + i * 150, 0.04, 'sawtooth', i * 0.04);
+        }
+      }
+
+      sfxHit() {
+        this.init();
+        this.playNoise(0.12);
+        this.playTone(180, 0.12, 'sawtooth');
+      }
+
+      sfxEmber() {
+        this.init();
+        for (let i = 0; i < 5; i++) {
+          this.playNoise(0.06, i * 0.05);
+          this.playTone(600 - i * 80, 0.05, 'triangle', i * 0.05);
+        }
+      }
+
+      sfxCatchSuccess() {
+        this.init();
+        const notes = [523.25, 659.25, 783.99, 1046.50];
+        notes.forEach((n, idx) => {
+          this.playTone(n, 0.15, 'square', idx * 0.12);
+        });
+      }
+
+      sfxLevelUp() {
+        this.init();
+        const melody = [440, 554, 659, 880, 830, 880];
+        melody.forEach((n, idx) => {
+          this.playTone(n, 0.12, 'square', idx * 0.1);
+        });
+      }
+
+      sfxBump() {
+        this.init();
+        this.playTone(120, 0.06, 'triangle');
+      }
+
+      sfxGrass() {
+        this.init();
+        this.playNoise(0.04);
+      }
+
+      // Background Music
+      startBgm(theme) {
+        if (!this.enabled) return;
+        this.init();
+        if (this.currentBgm === theme) return;
+        this.stopBgm();
+        this.currentBgm = theme;
+        this.step = 0;
+
+        if (theme === 'town') {
+          // Pallet Town soothing 8-bit melody
+          const tempo = 220;
+          const melody = [
+            523, 0, 659, 0, 784, 0, 659, 0,
+            587, 0, 659, 0, 523, 0, 0, 0,
+            440, 0, 523, 0, 659, 0, 523, 0,
+            493, 0, 587, 0, 392, 0, 0, 0
+          ];
+          const bass = [
+            261, 261, 329, 329, 392, 392, 329, 329,
+            293, 293, 329, 329, 261, 261, 261, 261,
+            220, 220, 261, 261, 329, 329, 261, 261,
+            246, 246, 293, 293, 196, 196, 196, 196
+          ];
+
+          this.bgmTimer = setInterval(() => {
+            if (!this.enabled) return;
+            const mNote = melody[this.step % melody.length];
+            const bNote = bass[this.step % bass.length];
+
+            if (mNote > 0) {
+              const osc = this.ctx.createOscillator();
+              const g = this.ctx.createGain();
+              osc.type = 'square';
+              osc.frequency.setValueAtTime(mNote, this.ctx.currentTime);
+              g.gain.setValueAtTime(0.08, this.ctx.currentTime);
+              g.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.18);
+              osc.connect(g);
+              g.connect(this.bgmGain);
+              osc.start();
+              osc.stop(this.ctx.currentTime + 0.18);
+            }
+
+            if (bNote > 0 && this.step % 2 === 0) {
+              const oscB = this.ctx.createOscillator();
+              const gB = this.ctx.createGain();
+              oscB.type = 'triangle';
+              oscB.frequency.setValueAtTime(bNote, this.ctx.currentTime);
+              gB.gain.setValueAtTime(0.12, this.ctx.currentTime);
+              gB.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.3);
+              oscB.connect(gB);
+              gB.connect(this.bgmGain);
+              oscB.start();
+              oscB.stop(this.ctx.currentTime + 0.3);
+            }
+
+            this.step++;
+          }, tempo);
+        } else if (theme === 'battle') {
+          // Fast-paced battle chiptune
+          const tempo = 130;
+          const bassLine = [
+            110, 110, 220, 110, 110, 220, 110, 110,
+            123, 123, 246, 123, 123, 246, 123, 123,
+            130, 130, 261, 130, 130, 261, 130, 130,
+            146, 146, 293, 146, 164, 164, 329, 164
+          ];
+          const melodyLine = [
+            440, 0, 523, 587, 659, 0, 587, 0,
+            523, 0, 440, 0, 493, 523, 587, 0,
+            659, 698, 784, 0, 659, 0, 587, 0,
+            523, 0, 493, 0, 440, 0, 0, 0
+          ];
+
+          this.bgmTimer = setInterval(() => {
+            if (!this.enabled) return;
+            const bNote = bassLine[this.step % bassLine.length];
+            const mNote = melodyLine[this.step % melodyLine.length];
+
+            // Bass (Sawtooth punch)
+            const oscB = this.ctx.createOscillator();
+            const gB = this.ctx.createGain();
+            oscB.type = 'sawtooth';
+            oscB.frequency.setValueAtTime(bNote, this.ctx.currentTime);
+            gB.gain.setValueAtTime(0.1, this.ctx.currentTime);
+            gB.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.1);
+            oscB.connect(gB);
+            gB.connect(this.bgmGain);
+            oscB.start();
+            oscB.stop(this.ctx.currentTime + 0.11);
+
+            // Lead
+            if (mNote > 0) {
+              const oscM = this.ctx.createOscillator();
+              const gM = this.ctx.createGain();
+              oscM.type = 'square';
+              oscM.frequency.setValueAtTime(mNote, this.ctx.currentTime);
+              gM.gain.setValueAtTime(0.09, this.ctx.currentTime);
+              gM.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.12);
+              oscM.connect(gM);
+              gM.connect(this.bgmGain);
+              oscM.start();
+              oscM.stop(this.ctx.currentTime + 0.13);
+            }
+
+            this.step++;
+          }, tempo);
+        }
+      }
+
+      stopBgm() {
+        if (this.bgmTimer) {
+          clearInterval(this.bgmTimer);
+          this.bgmTimer = null;
+        }
+        this.currentBgm = null;
+      }
+    }
+
+    const sound = new RetroSoundSystem();
+
+    /* ==========================================================================
+       2. PROCEDURAL 3D MODEL BUILDER (Voxel / Retro Low-Poly)
+       ========================================================================== */
+    class ModelFactory {
+      static createMaterial(color, roughness = 0.6) {
+        return new THREE.MeshLambertMaterial({ color, roughness });
+      }
+
+      // Red (Protagonist)
+      static createPlayer() {
+        const group = new THREE.Group();
+
+        const matSkin = this.createMaterial(0xffdfba);
+        const matRed = this.createMaterial(0xcc1111);
+        const matWhite = this.createMaterial(0xf4f4f4);
+        const matBlue = this.createMaterial(0x1a3c75);
+        const matGreen = this.createMaterial(0x27ae60);
+        const matBlack = this.createMaterial(0x222222);
+
+        // Body (Torso / Vest)
+        const torso = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.65, 0.35), matRed);
+        torso.position.y = 0.8;
+        torso.castShadow = true;
+        group.add(torso);
+
+        // Undershirt center
+        const undershirt = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.5, 0.05), matWhite);
+        undershirt.position.set(0, 0.8, 0.16);
+        group.add(undershirt);
+
+        // Backpack
+        const backpack = new THREE.Mesh(new THREE.BoxGeometry(0.45, 0.5, 0.22), matGreen);
+        backpack.position.set(0, 0.82, -0.25);
+        backpack.castShadow = true;
+        group.add(backpack);
+
+        // Head
+        const head = new THREE.Mesh(new THREE.BoxGeometry(0.48, 0.48, 0.48), matSkin);
+        head.position.y = 1.35;
+        head.castShadow = true;
+        group.add(head);
+
+        // Eyes
+        const eyeR = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.12, 0.04), matBlack);
+        eyeR.position.set(0.12, 1.36, 0.24);
+        const eyeL = eyeR.clone();
+        eyeL.position.set(-0.12, 1.36, 0.24);
+        group.add(eyeR, eyeL);
+
+        // Cap (Red Cap)
+        const capBase = new THREE.Mesh(new THREE.BoxGeometry(0.52, 0.2, 0.52), matRed);
+        capBase.position.y = 1.54;
+        group.add(capBase);
+
+        // Cap Visor
+        const visor = new THREE.Mesh(new THREE.BoxGeometry(0.46, 0.05, 0.22), matWhite);
+        visor.position.set(0, 1.48, 0.32);
+        group.add(visor);
+
+        // Cap Logo Dot
+        const capLogo = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.1, 0.02), matWhite);
+        capLogo.position.set(0, 1.56, 0.265);
+        group.add(capLogo);
+
+        // Left Arm
+        const armL = new THREE.Group();
+        armL.position.set(-0.38, 1.05, 0);
+        const sleeveL = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.25, 0.2), matRed);
+        sleeveL.position.y = -0.12;
+        const handL = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.25, 0.16), matSkin);
+        handL.position.y = -0.32;
+        armL.add(sleeveL, handL);
+        group.add(armL);
+
+        // Right Arm
+        const armR = new THREE.Group();
+        armR.position.set(0.38, 1.05, 0);
+        const sleeveR = sleeveL.clone();
+        const handR = handL.clone();
+        armR.add(sleeveR, handR);
+        group.add(armR);
+
+        // Left Leg
+        const legL = new THREE.Group();
+        legL.position.set(-0.16, 0.5, 0);
+        const pantsL = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.42, 0.24), matBlue);
+        pantsL.position.y = -0.2;
+        const shoeL = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.14, 0.3), matWhite);
+        shoeL.position.set(0, -0.42, 0.04);
+        legL.add(pantsL, shoeL);
+        group.add(legL);
+
+        // Right Leg
+        const legR = new THREE.Group();
+        legR.position.set(0.16, 0.5, 0);
+        const pantsR = pantsL.clone();
+        const shoeR = shoeL.clone();
+        legR.add(pantsR, shoeR);
+        group.add(legR);
+
+        group.userData = { armL, armR, legL, legR, walkTime: 0 };
+        return group;
+      }
+
+      // Prof. Oak
+      static createOak() {
+        const group = new THREE.Group();
+        const matSkin = this.createMaterial(0xffdfba);
+        const matHair = this.createMaterial(0x888888);
+        const matCoat = this.createMaterial(0xffffff);
+        const matShirt = this.createMaterial(0xa93226);
+        const matPants = this.createMaterial(0x5d6d7e);
+
+        // Coat / Body
+        const body = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.8, 0.4), matCoat);
+        body.position.y = 0.8;
+        const inner = new THREE.Mesh(new THREE.BoxGeometry(0.25, 0.5, 0.05), matShirt);
+        inner.position.set(0, 0.88, 0.19);
+        group.add(body, inner);
+
+        // Head
+        const head = new THREE.Mesh(new THREE.BoxGeometry(0.45, 0.45, 0.45), matSkin);
+        head.position.y = 1.4;
+        const hair = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.2, 0.5), matHair);
+        hair.position.y = 1.56;
+        group.add(head, hair);
+
+        // Legs
+        const legs = new THREE.Mesh(new THREE.BoxGeometry(0.48, 0.45, 0.3), matPants);
+        legs.position.y = 0.22;
+        group.add(legs);
+
+        return group;
+      }
+
+      // Charmander (ヒトカゲ)
+      static createCharmander() {
+        const group = new THREE.Group();
+        const matOrange = this.createMaterial(0xff6b2b);
+        const matCream = this.createMaterial(0xffeaa7);
+        const matBlue = this.createMaterial(0x0984e3);
+        const matFlame = new THREE.MeshBasicMaterial({ color: 0xff3838 });
+        const matFlameInner = new THREE.MeshBasicMaterial({ color: 0xffd32a });
+
+        // Head
+        const head = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.65, 0.7), matOrange);
+        head.position.y = 0.95;
+        head.castShadow = true;
+        group.add(head);
+
+        // Snout
+        const snout = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.26, 0.25), matOrange);
+        snout.position.set(0, 0.85, 0.42);
+        group.add(snout);
+
+        // Eyes
+        const eyeL = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.18, 0.02), matBlue);
+        eyeL.position.set(-0.2, 1.02, 0.36);
+        const eyeR = eyeL.clone();
+        eyeR.position.set(0.2, 1.02, 0.36);
+        group.add(eyeL, eyeR);
+
+        // Body
+        const body = new THREE.Mesh(new THREE.BoxGeometry(0.65, 0.6, 0.55), matOrange);
+        body.position.y = 0.48;
+        body.castShadow = true;
+        group.add(body);
+
+        // Belly
+        const belly = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.45, 0.08), matCream);
+        belly.position.set(0, 0.48, 0.26);
+        group.add(belly);
+
+        // Legs
+        const legL = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.3, 0.26), matOrange);
+        legL.position.set(-0.25, 0.15, 0.05);
+        const legR = legL.clone();
+        legR.position.set(0.25, 0.15, 0.05);
+        group.add(legL, legR);
+
+        // Tail
+        const tailGroup = new THREE.Group();
+        tailGroup.position.set(0, 0.35, -0.28);
+        const tailMesh = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.18, 0.45), matOrange);
+        tailMesh.position.set(0, 0.05, -0.18);
+        tailMesh.rotation.x = -0.3;
+        tailGroup.add(tailMesh);
+
+        // Flame
+        const flame = new THREE.Mesh(new THREE.DodecahedronGeometry(0.18), matFlame);
+        flame.position.set(0, 0.22, -0.4);
+        const flameIn = new THREE.Mesh(new THREE.DodecahedronGeometry(0.1), matFlameInner);
+        flameIn.position.set(0, 0.22, -0.4);
+        tailGroup.add(flame, flameIn);
+        group.add(tailGroup);
+
+        group.userData = { flame, flameIn, tailGroup };
+        return group;
+      }
+
+      // Pidgey (ポッポ)
+      static createPidgey() {
+        const group = new THREE.Group();
+        const matBrown = this.createMaterial(0x8a5531);
+        const matCream = this.createMaterial(0xe6cfb3);
+        const matBeak = this.createMaterial(0xf39c12);
+        const matBlack = this.createMaterial(0x222222);
+
+        // Body
+        const body = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.5, 0.6), matBrown);
+        body.position.y = 0.4;
+        group.add(body);
+
+        // Chest / Belly
+        const belly = new THREE.Mesh(new THREE.BoxGeometry(0.35, 0.4, 0.3), matCream);
+        belly.position.set(0, 0.35, 0.2);
+        group.add(belly);
+
+        // Beak
+        const beak = new THREE.Mesh(new THREE.ConeGeometry(0.12, 0.25, 4), matBeak);
+        beak.rotation.x = Math.PI / 2;
+        beak.position.set(0, 0.45, 0.4);
+        group.add(beak);
+
+        // Eyes
+        const eyeL = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.08, 0.02), matBlack);
+        eyeL.position.set(-0.18, 0.5, 0.28);
+        const eyeR = eyeL.clone();
+        eyeR.position.set(0.18, 0.5, 0.28);
+        group.add(eyeL, eyeR);
+
+        // Wings
+        const wingL = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.3, 0.5), matBrown);
+        wingL.position.set(-0.3, 0.4, -0.05);
+        const wingR = wingL.clone();
+        wingR.position.set(0.3, 0.4, -0.05);
+        group.add(wingL, wingR);
+
+        group.userData = { wingL, wingR };
+        return group;
+      }
+
+      // Rattata (コラッタ)
+      static createRattata() {
+        const group = new THREE.Group();
+        const matPurple = this.createMaterial(0x7d3c98);
+        const matCream = this.createMaterial(0xf5eef8);
+        const matWhite = this.createMaterial(0xffffff);
+
+        // Body
+        const body = new THREE.Mesh(new THREE.BoxGeometry(0.45, 0.4, 0.65), matPurple);
+        body.position.y = 0.3;
+        group.add(body);
+
+        // Belly
+        const belly = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.25, 0.45), matCream);
+        belly.position.set(0, 0.2, 0.1);
+        group.add(belly);
+
+        // Snout & Teeth
+        const snout = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.2, 0.25), matCream);
+        snout.position.set(0, 0.3, 0.4);
+        const tooth = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.1, 0.05), matWhite);
+        tooth.position.set(0, 0.22, 0.52);
+        group.add(snout, tooth);
+
+        // Ears
+        const earL = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.22, 0.06), matPurple);
+        earL.position.set(-0.2, 0.54, 0.1);
+        const earR = earL.clone();
+        earR.position.set(0.2, 0.54, 0.1);
+        group.add(earL, earR);
+
+        // Curly tail
+        const tail = new THREE.Mesh(new THREE.TorusGeometry(0.16, 0.04, 4, 12, Math.PI * 1.3), matPurple);
+        tail.position.set(0, 0.4, -0.35);
+        tail.rotation.y = Math.PI / 2;
+        group.add(tail);
+
+        return group;
+      }
+
+      // Pikachu (ピカチュウ)
+      static createPikachu() {
+        const group = new THREE.Group();
+        const matYellow = this.createMaterial(0xf1c40f);
+        const matBlack = this.createMaterial(0x111111);
+        const matRed = this.createMaterial(0xe74c3c);
+        const matBrown = this.createMaterial(0x784212);
+
+        // Body
+        const body = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.6, 0.5), matYellow);
+        body.position.y = 0.42;
+        group.add(body);
+
+        // Head
+        const head = new THREE.Mesh(new THREE.BoxGeometry(0.52, 0.48, 0.48), matYellow);
+        head.position.y = 0.85;
+        group.add(head);
+
+        // Red Cheeks
+        const cheekL = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.1, 0.02), matRed);
+        cheekL.position.set(-0.2, 0.8, 0.25);
+        const cheekR = cheekL.clone();
+        cheekR.position.set(0.2, 0.8, 0.25);
+        group.add(cheekL, cheekR);
+
+        // Long Ears
+        const earL = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.4, 0.08), matYellow);
+        earL.position.set(-0.22, 1.25, 0);
+        earL.rotation.z = 0.25;
+        const earTipL = new THREE.Mesh(new THREE.BoxGeometry(0.11, 0.14, 0.09), matBlack);
+        earTipL.position.set(-0.27, 1.38, 0);
+        earTipL.rotation.z = 0.25;
+
+        const earR = earL.clone();
+        earR.position.set(0.22, 1.25, 0);
+        earR.rotation.z = -0.25;
+        const earTipR = earTipL.clone();
+        earTipR.position.set(0.27, 1.38, 0);
+        earTipR.rotation.z = -0.25;
+        group.add(earL, earTipL, earR, earTipR);
+
+        // Lightning Tail
+        const tailPart1 = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.2, 0.04), matBrown);
+        tailPart1.position.set(0, 0.4, -0.3);
+        tailPart1.rotation.x = -0.6;
+        const tailPart2 = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.35, 0.04), matYellow);
+        tailPart2.position.set(0, 0.65, -0.42);
+        tailPart2.rotation.x = 0.3;
+        group.add(tailPart1, tailPart2);
+
+        return group;
+      }
+
+      // Houses
+      static createHouse(roofColor = 0xc0392b) {
+        const group = new THREE.Group();
+        const matWalls = this.createMaterial(0xfcf3cf);
+        const matRoof = this.createMaterial(roofColor);
+        const matDoor = this.createMaterial(0x6e2c00);
+        const matWindow = this.createMaterial(0x85c1e9);
+
+        // Main Walls
+        const walls = new THREE.Mesh(new THREE.BoxGeometry(4.4, 2.8, 3.8), matWalls);
+        walls.position.y = 1.4;
+        walls.castShadow = true;
+        walls.receiveShadow = true;
+        group.add(walls);
+
+        // Roof
+        const roof = new THREE.Mesh(new THREE.ConeGeometry(3.6, 1.8, 4), matRoof);
+        roof.position.y = 3.6;
+        roof.rotation.y = Math.PI / 4;
+        roof.scale.set(1.1, 1, 0.9);
+        roof.castShadow = true;
+        group.add(roof);
+
+        // Door
+        const door = new THREE.Mesh(new THREE.BoxGeometry(1.0, 1.6, 0.1), matDoor);
+        door.position.set(0, 0.8, 1.95);
+        group.add(door);
+
+        // Windows
+        const winL = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.9, 0.1), matWindow);
+        winL.position.set(-1.4, 1.6, 1.95);
+        const winR = winL.clone();
+        winR.position.set(1.4, 1.6, 1.95);
+        group.add(winL, winR);
+
+        return group;
+      }
+
+      // Oak's Laboratory
+      static createLab() {
+        const group = new THREE.Group();
+        const matWalls = this.createMaterial(0xebedef);
+        const matRoof = this.createMaterial(0x34495e);
+        const matDoor = this.createMaterial(0x2c3e50);
+        const matGlass = this.createMaterial(0x5dade2);
+
+        // Large building
+        const main = new THREE.Mesh(new THREE.BoxGeometry(6.5, 3.2, 4.8), matWalls);
+        main.position.y = 1.6;
+        main.castShadow = true;
+        main.receiveShadow = true;
+        group.add(main);
+
+        // Flat roof with border
+        const roofBorder = new THREE.Mesh(new THREE.BoxGeometry(6.8, 0.4, 5.1), matRoof);
+        roofBorder.position.y = 3.4;
+        group.add(roofBorder);
+
+        // Windows row
+        for (let i = -2; i <= 2; i += 2) {
+          const win = new THREE.Mesh(new THREE.BoxGeometry(1.2, 1.2, 0.1), matGlass);
+          win.position.set(i, 2.0, 2.45);
+          group.add(win);
+        }
+
+        // Lab Double Door
+        const door = new THREE.Mesh(new THREE.BoxGeometry(1.6, 1.8, 0.1), matDoor);
+        door.position.set(0, 0.9, 2.45);
+        group.add(door);
+
+        // Sign plate
+        const plate = new THREE.Mesh(new THREE.BoxGeometry(2.2, 0.4, 0.08), this.createMaterial(0xd4ac0d));
+        plate.position.set(0, 2.1, 2.48);
+        group.add(plate);
+
+        return group;
+      }
+
+      // Trees
+      static createTree() {
+        const group = new THREE.Group();
+        const matTrunk = this.createMaterial(0x6e2c00);
+        const matLeaves = this.createMaterial(0x27ae60);
+        const matLeavesTop = this.createMaterial(0x2ecc71);
+
+        const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.28, 0.35, 1.2, 6), matTrunk);
+        trunk.position.y = 0.6;
+        trunk.castShadow = true;
+        group.add(trunk);
+
+        const fol1 = new THREE.Mesh(new THREE.DodecahedronGeometry(1.2), matLeaves);
+        fol1.position.y = 1.8;
+        fol1.castShadow = true;
+        group.add(fol1);
+
+        const fol2 = new THREE.Mesh(new THREE.DodecahedronGeometry(0.9), matLeavesTop);
+        fol2.position.y = 2.6;
+        fol2.castShadow = true;
+        group.add(fol2);
+
+        return group;
+      }
+
+      // Tall Grass (Route 1)
+      static createTallGrass() {
+        const group = new THREE.Group();
+        const matGrass = this.createMaterial(0x229954);
+
+        for (let i = 0; i < 7; i++) {
+          const blade = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.6 + Math.random() * 0.3, 0.14), matGrass);
+          blade.position.set(
+            (Math.random() - 0.5) * 1.4,
+            0.35,
+            (Math.random() - 0.5) * 1.4
+          );
+          blade.rotation.y = Math.random() * Math.PI;
+          group.add(blade);
+        }
+        return group;
+      }
+
+      // Fence
+      static createFence() {
+        const group = new THREE.Group();
+        const matWood = this.createMaterial(0xd5d8dc);
+
+        const postL = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.8, 0.18), matWood);
+        postL.position.set(-0.8, 0.4, 0);
+        const postR = postL.clone();
+        postR.position.set(0.8, 0.4, 0);
+
+        const bar1 = new THREE.Mesh(new THREE.BoxGeometry(1.8, 0.12, 0.1), matWood);
+        bar1.position.set(0, 0.55, 0);
+        const bar2 = bar1.clone();
+        bar2.position.set(0, 0.25, 0);
+
+        group.add(postL, postR, bar1, bar2);
+        return group;
+      }
+
+      // Signboard
+      static createSign() {
+        const group = new THREE.Group();
+        const matWood = this.createMaterial(0x784212);
+        const matBoard = this.createMaterial(0xd4ac0d);
+
+        const post = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.9, 0.15), matWood);
+        post.position.y = 0.45;
+
+        const board = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.6, 0.12), matBoard);
+        board.position.set(0, 0.85, 0.05);
+
+        group.add(post, board);
+        return group;
+      }
+
+      // Pokeball (3D)
+      static createPokeball() {
+        const group = new THREE.Group();
+        const matRed = new THREE.MeshLambertMaterial({ color: 0xee1515 });
+        const matWhite = new THREE.MeshLambertMaterial({ color: 0xffffff });
+        const matBlack = new THREE.MeshLambertMaterial({ color: 0x111111 });
+
+        const topHalf = new THREE.Mesh(new THREE.SphereGeometry(0.4, 16, 8, 0, Math.PI * 2, 0, Math.PI / 2), matRed);
+        const bottomHalf = new THREE.Mesh(new THREE.SphereGeometry(0.4, 16, 8, 0, Math.PI * 2, Math.PI / 2, Math.PI / 2), matWhite);
+        const band = new THREE.Mesh(new THREE.CylinderGeometry(0.405, 0.405, 0.06, 16), matBlack);
+        const btnOuter = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.12, 0.04, 12), matBlack);
+        btnOuter.rotation.x = Math.PI / 2;
+        btnOuter.position.set(0, 0, 0.39);
+        const btnInner = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 0.06, 12), matWhite);
+        btnInner.rotation.x = Math.PI / 2;
+        btnInner.position.set(0, 0, 0.4);
+
+        group.add(topHalf, bottomHalf, band, btnOuter, btnInner);
+        return group;
+      }
+    }
+
+    /* ==========================================================================
+       3. GAME DATA & STATE
+       ========================================================================== */
+    const POKEMON_DATABASE = {
+      charmander: {
+        id: 'charmander',
+        name: 'ヒトカゲ',
+        maxHp: 22,
+        level: 5,
+        type: 'ほのお',
+        attack: 14,
+        defense: 12,
+        speed: 15,
+        moves: [
+          { name: 'ひのこ', type: 'fire', power: 20, pp: 25, maxPp: 25 },
+          { name: 'ひっかき', type: 'normal', power: 15, pp: 35, maxPp: 35 },
+          { name: 'たいあたり', type: 'normal', power: 12, pp: 35, maxPp: 35 }
+        ]
+      },
+      pidgey: {
+        id: 'pidgey',
+        name: 'ポッポ',
+        maxHp: 18,
+        level: 3,
+        type: 'ノーマル',
+        attack: 10,
+        defense: 9,
+        speed: 13,
+        expReward: 30,
+        moves: [
+          { name: 'たいあたり', power: 10 },
+          { name: 'かぜおこし', power: 14 }
+        ]
+      },
+      rattata: {
+        id: 'rattata',
+        name: 'コラッタ',
+        maxHp: 16,
+        level: 3,
+        type: 'ノーマル',
+        attack: 12,
+        defense: 8,
+        speed: 16,
+        expReward: 28,
+        moves: [
+          { name: 'たいあたり', power: 10 },
+          { name: 'ひっかく', power: 12 }
+        ]
+      },
+      pikachu: {
+        id: 'pikachu',
+        name: 'ピカチュウ',
+        maxHp: 20,
+        level: 5,
+        type: 'でんき',
+        attack: 15,
+        defense: 10,
+        speed: 20,
+        expReward: 50,
+        moves: [
+          { name: 'でんきショック', power: 18 },
+          { name: 'なきごえ', power: 0 }
+        ]
+      }
+    };
+
+    const gameState = {
+      mode: 'FIELD',
+      player: {
+        x: 8,
+        z: 14,
+        targetX: 8,
+        targetZ: 14,
+        moving: false,
+        dir: 'down',
+        pokemon: [
+          {
+            ...POKEMON_DATABASE.charmander,
+            currentHp: 22,
+            exp: 0,
+            nextExp: 50
+          }
+        ],
+        items: {
+          balls: 5,
+          potions: 3
+        }
+      },
+      battle: {
+        active: false,
+        enemy: null,
+        playerPkmn: null,
+        turn: 'player',
+        isCatching: false
+      }
+    };
+
+    /* ==========================================================================
+       4. WORLD & GRAPHICS ENGINE (Three.js Setup)
+       ========================================================================== */
+    class GameApp {
+      constructor() {
+        this.container = document.getElementById('screen-container');
+        this.canvas = document.getElementById('viewport-canvas');
+        
+        // Scene, Camera, Renderer
+        this.scene = new THREE.Scene();
+        this.scene.background = new THREE.Color(0x90caf9);
+        this.scene.fog = new THREE.Fog(0x90caf9, 20, 48);
+
+        this.camera = new THREE.PerspectiveCamera(45, this.container.clientWidth / this.container.clientHeight, 0.1, 100);
+        this.renderer = new THREE.WebGLRenderer({ canvas: this.canvas, antialias: true });
+        this.renderer.setSize(this.container.clientWidth, this.container.clientHeight);
+        this.renderer.shadowMap.enabled = true;
+        this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
+        // Lighting
+        const hemiLight = new THREE.HemisphereLight(0xffffff, 0x444444, 0.75);
+        hemiLight.position.set(0, 30, 0);
+        this.scene.add(hemiLight);
+
+        this.dirLight = new THREE.DirectionalLight(0xfffaed, 0.9);
+        this.dirLight.position.set(15, 25, 20);
+        this.dirLight.castShadow = true;
+        this.dirLight.shadow.mapSize.width = 1024;
+        this.dirLight.shadow.mapSize.height = 1024;
+        this.dirLight.shadow.camera.near = 0.5;
+        this.dirLight.shadow.camera.far = 60;
+        this.dirLight.shadow.camera.left = -20;
+        this.dirLight.shadow.camera.right = 20;
+        this.dirLight.shadow.camera.top = 20;
+        this.dirLight.shadow.camera.bottom = -20;
+        this.scene.add(this.dirLight);
+
+        // Groups
+        this.fieldGroup = new THREE.Group();
+        this.battleGroup = new THREE.Group();
+        this.battleGroup.visible = false;
+        this.scene.add(this.fieldGroup, this.battleGroup);
+
+        // Colliders & Interactive zones
+        this.colliders = new Set();
+        this.tallGrassTiles = new Set();
+        this.interactables = [];
+
+        // Entities
+        this.playerMesh = null;
+        this.battleModels = {};
+
+        // Input tracking
+        this.keys = {};
+
+        this.initWorld();
+        this.initBattleScene();
+        this.initUI();
+        this.setupEventListeners();
+
+        // Start render loop
+        this.lastTime = performance.now();
+        requestAnimationFrame(this.render.bind(this));
+
+        // Start Ambient Sound
+        setTimeout(() => {
+          sound.startBgm('town');
+        }, 300);
+      }
+
+      initWorld() {
+        // Ground plane
+        const groundMat = new THREE.MeshLambertMaterial({ color: 0x76d7c4 });
+        const ground = new THREE.Mesh(new THREE.PlaneGeometry(60, 70), groundMat);
+        ground.rotation.x = -Math.PI / 2;
+        ground.receiveShadow = true;
+        this.fieldGroup.add(ground);
+
+        // Path (Dirt roads)
+        const pathMat = new THREE.MeshLambertMaterial({ color: 0xf5cba7 });
+        const makePath = (w, h, x, z) => {
+          const p = new THREE.Mesh(new THREE.PlaneGeometry(w, h), pathMat);
+          p.rotation.x = -Math.PI / 2;
+          p.position.set(x, 0.02, z);
+          p.receiveShadow = true;
+          this.fieldGroup.add(p);
+        };
+        // Pallet Town Roads
+        makePath(3, 16, 8, 14);
+        makePath(16, 3, 11, 10);
+        makePath(4, 20, 8, 30);
+
+        // Water (South of Pallet Town)
+        const waterMat = new THREE.MeshLambertMaterial({ color: 0x3498db });
+        const water = new THREE.Mesh(new THREE.PlaneGeometry(40, 16), waterMat);
+        water.rotation.x = -Math.PI / 2;
+        water.position.set(8, 0.03, -8);
+        this.fieldGroup.add(water);
+
+        // Boundary Water Colliders
+        for (let x = -8; x <= 24; x += 2) {
+          this.colliders.add(`${x},0`);
+        }
+
+        // Buildings
+        // 1. Red's House (Left)
+        const redHouse = ModelFactory.createHouse(0xc0392b);
+        redHouse.position.set(4, 0, 8);
+        this.fieldGroup.add(redHouse);
+        this.addBoxCollider(4, 8, 5, 4);
+
+        // 2. Rival's House (Right)
+        const rivalHouse = ModelFactory.createHouse(0x2980b9);
+        rivalHouse.position.set(15, 0, 8);
+        this.fieldGroup.add(rivalHouse);
+        this.addBoxCollider(15, 8, 5, 4);
+
+        // 3. Oak's Lab (Bottom Right)
+        const lab = ModelFactory.createLab();
+        lab.position.set(14, 0, 18);
+        this.fieldGroup.add(lab);
+        this.addBoxCollider(14, 18, 7, 5);
+
+        // Signposts & Interactables
+        const makeSign = (x, z, message, onRead = null) => {
+          const sign = ModelFactory.createSign();
+          sign.position.set(x, 0, z);
+          this.fieldGroup.add(sign);
+          this.colliders.add(`${Math.round(x)},${Math.round(z)}`);
+          this.interactables.push({
+            x: Math.round(x),
+            z: Math.round(z),
+            action: () => {
+              this.showDialog(message);
+              if (onRead) onRead();
+            }
+          });
+        };
+
+        makeSign(3, 10.5, "【レッドの いえ】\nママ「レッド！ むり を しないで\nたまには やすみなさいね」\n（HPが ぜんかいふく した！）", () => {
+          gameState.player.pokemon[0].currentHp = gameState.player.pokemon[0].maxHp;
+          this.showToast("ポケモンが げんきに なった！");
+        });
+
+        makeSign(11, 19, "【オーキド ポケモン けんきゅうじょ】\nポケモン けんきゅうの だいいちにんしゃ\nオーキドはかせ の けんきゅうじょ だ！");
+        makeSign(6, 21, "ここは マサラタウン\nマサラは しろき はじまりの いろ");
+        makeSign(6, 32, "ここは 1ばんどうろ\nトキワシティ へ つづく みち");
+
+        // Fences
+        for (let x = 0; x <= 18; x += 2) {
+          if (x === 8) continue;
+          const fence = ModelFactory.createFence();
+          fence.position.set(x, 0, 22);
+          this.fieldGroup.add(fence);
+          this.colliders.add(`${x},22`);
+        }
+
+        // Surrounding Trees (Forest Walls)
+        for (let z = -2; z <= 42; z += 2.5) {
+          const t1 = ModelFactory.createTree();
+          t1.position.set(-2, 0, z);
+          const t2 = ModelFactory.createTree();
+          t2.position.set(22, 0, z);
+          this.fieldGroup.add(t1, t2);
+          this.colliders.add(`-2,${Math.round(z)}`);
+          this.colliders.add(`22,${Math.round(z)}`);
+        }
+
+        // Route 1 Tall Grass (Wild Encounters)
+        for (let z = 24; z <= 38; z += 2) {
+          for (let x of [4, 6, 10, 12]) {
+            const grass = ModelFactory.createTallGrass();
+            grass.position.set(x, 0, z);
+            this.fieldGroup.add(grass);
+            this.tallGrassTiles.add(`${x},${z}`);
+          }
+        }
+
+        // Professor Oak NPC
+        this.oakMesh = ModelFactory.createOak();
+        this.oakMesh.position.set(8, 0, 20);
+        this.fieldGroup.add(this.oakMesh);
+        this.colliders.add(`8,20`);
+        this.interactables.push({
+          x: 8,
+          z: 20,
+          action: () => {
+            sound.sfxConfirm();
+            this.showDialog(
+              "オーキドはかせ「おお レッド！\nきたの 1ばんどうろ には\nたくさんの やせいポケモン が おるぞ！\n\nモンスターボール を つかって\nどんどん つかまえてみるのじゃ！」"
+            );
+          }
+        });
+
+        // Player (Red)
+        this.playerMesh = ModelFactory.createPlayer();
+        this.playerMesh.position.set(gameState.player.x, 0, gameState.player.z);
+        this.fieldGroup.add(this.playerMesh);
+      }
+
+      addBoxCollider(cx, cz, width, depth) {
+        const halfW = width / 2;
+        const halfD = depth / 2;
+        for (let x = Math.round(cx - halfW); x <= Math.round(cx + halfW); x++) {
+          for (let z = Math.round(cz - halfD); z <= Math.round(cz + halfD); z++) {
+            this.colliders.add(`${x},${z}`);
+          }
+        }
+      }
+
+      initBattleScene() {
+        // Battle Platform Ground
+        const platMat = new THREE.MeshLambertMaterial({ color: 0x58d68d });
+        const enemyPlat = new THREE.Mesh(new THREE.CylinderGeometry(2.5, 2.8, 0.4, 24), platMat);
+        enemyPlat.position.set(3.8, -0.2, -6);
+        enemyPlat.receiveShadow = true;
+
+        const playerPlat = new THREE.Mesh(new THREE.CylinderGeometry(3.0, 3.2, 0.4, 24), platMat);
+        playerPlat.position.set(-3.2, -0.2, 0.5);
+        playerPlat.receiveShadow = true;
+
+        this.battleGroup.add(enemyPlat, playerPlat);
+
+        // Player Battle Pokemon (Charmander)
+        this.battlePlayerPkmn = ModelFactory.createCharmander();
+        this.battlePlayerPkmn.position.set(-3.2, 0, 0.5);
+        this.battlePlayerPkmn.scale.set(1.4, 1.4, 1.4);
+        this.battlePlayerPkmn.rotation.y = Math.PI * 0.25;
+        this.battleGroup.add(this.battlePlayerPkmn);
+
+        // Enemy container
+        this.enemySlot = new THREE.Group();
+        this.enemySlot.position.set(3.8, 0, -6);
+        this.enemySlot.scale.set(1.4, 1.4, 1.4);
+        this.enemySlot.rotation.y = -Math.PI * 0.75;
+        this.battleGroup.add(this.enemySlot);
+
+        // Pokeball throw entity
+        this.pokeballMesh = ModelFactory.createPokeball();
+        this.pokeballMesh.visible = false;
+        this.battleGroup.add(this.pokeballMesh);
+      }
+
+      /* ==========================================================================
+         5. GAME CONTROLS & EVENTS
+         ========================================================================== */
+      setupEventListeners() {
+        // Keyboard
+        window.addEventListener('keydown', (e) => {
+          if (['ArrowUp','ArrowDown','ArrowLeft','ArrowRight',' '].includes(e.key)) {
+            e.preventDefault();
+          }
+          this.handleKeyDown(e.key.toLowerCase());
+        });
+
+        window.addEventListener('keyup', (e) => {
+          this.handleKeyUp(e.key.toLowerCase());
+        });
+
+        // Touch & Virtual Buttons
+        const bindBtn = (id, key) => {
+          const btn = document.getElementById(id);
+          if (!btn) return;
+          const press = (ev) => {
+            ev.preventDefault();
+            btn.classList.add('pressed');
+            this.handleKeyDown(key);
+          };
+          const release = (ev) => {
+            ev.preventDefault();
+            btn.classList.remove('pressed');
+            this.handleKeyUp(key);
+          };
+          btn.addEventListener('touchstart', press, { passive: false });
+          btn.addEventListener('touchend', release);
+          btn.addEventListener('mousedown', press);
+          btn.addEventListener('mouseup', release);
+          btn.addEventListener('mouseleave', release);
+        };
+
+        bindBtn('btn-up', 'arrowup');
+        bindBtn('btn-down', 'arrowdown');
+        bindBtn('btn-left', 'arrowleft');
+        bindBtn('btn-right', 'arrowright');
+        bindBtn('btn-a', 'z');
+        bindBtn('btn-b', 'x');
+        bindBtn('btn-start', 'c');
+        bindBtn('btn-select', 'shift');
+
+        // Header Buttons
+        document.getElementById('btn-sound-toggle').addEventListener('click', () => {
+          const on = sound.toggleSound();
+          document.getElementById('btn-sound-toggle').textContent = on ? '🔊 BGM ON' : '🔇 BGM OFF';
+          this.showToast(on ? 'サウンドを オン にしました' : 'サウンドを ミュート しました');
+        });
+
+        document.getElementById('btn-help-toggle').addEventListener('click', () => {
+          document.getElementById('help-modal').style.display = 'block';
+        });
+        document.getElementById('help-close').addEventListener('click', () => {
+          document.getElementById('help-modal').style.display = 'none';
+        });
+        document.getElementById('pkmn-modal-close').addEventListener('click', () => {
+          document.getElementById('pokemon-modal').style.display = 'none';
+          if (gameState.mode === 'MENU') this.setMode('FIELD');
+        });
+
+        // Resize
+        window.addEventListener('resize', () => {
+          const w = this.container.clientWidth;
+          const h = this.container.clientHeight;
+          this.camera.aspect = w / h;
+          this.camera.updateProjectionMatrix();
+          this.renderer.setSize(w, h);
+        });
+      }
+
+      handleKeyDown(k) {
+        this.keys[k] = true;
+
+        if (gameState.mode === 'DIALOG') {
+          if (k === 'z' || k === 'enter' || k === ' ') {
+            this.advanceDialog();
+          }
+          return;
+        }
+
+        if (gameState.mode === 'FIELD') {
+          if (k === 'c' || k === 'escape') {
+            this.toggleMenu();
+            return;
+          }
+          if (k === 'z' || k === 'enter' || k === ' ') {
+            this.checkInteraction();
+            return;
+          }
+        }
+
+        if (gameState.mode === 'MENU') {
+          if (k === 'c' || k === 'x' || k === 'escape') {
+            this.toggleMenu(false);
+          }
+        }
+      }
+
+      handleKeyUp(k) {
+        this.keys[k] = false;
+      }
+
+      /* ==========================================================================
+         6. FIELD MOVEMENT & LOGIC
+         ========================================================================== */
+      updatePlayer(dt) {
+        if (gameState.mode !== 'FIELD') return;
+
+        const p = gameState.player;
+        const speed = 4.2;
+
+        if (p.moving) {
+          const dx = p.targetX - p.x;
+          const dz = p.targetZ - p.z;
+          const dist = Math.sqrt(dx * dx + dz * dz);
+          const step = speed * dt;
+
+          if (dist <= step) {
+            p.x = p.targetX;
+            p.z = p.targetZ;
+            p.moving = false;
+            this.onStepComplete();
+          } else {
+            p.x += (dx / dist) * step;
+            p.z += (dz / dist) * step;
+          }
+
+          // Walk animation (limb swing)
+          const userData = this.playerMesh.userData;
+          userData.walkTime += dt * 14;
+          const angle = Math.sin(userData.walkTime) * 0.45;
+          userData.legL.rotation.x = angle;
+          userData.legR.rotation.x = -angle;
+          userData.armL.rotation.x = -angle;
+          userData.armR.rotation.x = angle;
+        } else {
+          const userData = this.playerMesh.userData;
+          userData.legL.rotation.x = 0;
+          userData.legR.rotation.x = 0;
+          userData.armL.rotation.x = 0;
+          userData.armR.rotation.x = 0;
+
+          let moveX = 0;
+          let moveZ = 0;
+
+          if (this.keys['arrowup'] || this.keys['w']) {
+            moveZ = -1;
+            p.dir = 'up';
+            this.playerMesh.rotation.y = Math.PI;
+          } else if (this.keys['arrowdown'] || this.keys['s']) {
+            moveZ = 1;
+            p.dir = 'down';
+            this.playerMesh.rotation.y = 0;
+          } else if (this.keys['arrowleft'] || this.keys['a']) {
+            moveX = -1;
+            p.dir = 'left';
+            this.playerMesh.rotation.y = Math.PI / 2;
+          } else if (this.keys['arrowright'] || this.keys['d']) {
+            moveX = 1;
+            p.dir = 'right';
+            this.playerMesh.rotation.y = -Math.PI / 2;
+          }
+
+          if (moveX !== 0 || moveZ !== 0) {
+            const nextX = Math.round(p.x + moveX);
+            const nextZ = Math.round(p.z + moveZ);
+
+            if (!this.isSolid(nextX, nextZ)) {
+              p.targetX = nextX;
+              p.targetZ = nextZ;
+              p.moving = true;
+            } else {
+              sound.sfxBump();
+            }
+          }
+        }
+
+        // Update 3D mesh position
+        this.playerMesh.position.x = p.x;
+        this.playerMesh.position.z = p.z;
+
+        // Smooth camera follow
+        const targetCamX = p.x;
+        const targetCamY = 11;
+        const targetCamZ = p.z + 10;
+
+        this.camera.position.x += (targetCamX - this.camera.position.x) * 0.1;
+        this.camera.position.y += (targetCamY - this.camera.position.y) * 0.1;
+        this.camera.position.z += (targetCamZ - this.camera.position.z) * 0.1;
+        this.camera.lookAt(p.x, 1, p.z);
+      }
+
+      isSolid(x, z) {
+        return this.colliders.has(`${x},${z}`);
+      }
+
+      onStepComplete() {
+        const p = gameState.player;
+        const currentCoord = `${Math.round(p.x)},${Math.round(p.z)}`;
+
+        if (this.tallGrassTiles.has(currentCoord)) {
+          sound.sfxGrass();
+          if (Math.random() < 0.28) {
+            this.triggerWildBattle();
+          }
+        }
+
+        const locBadge = document.getElementById('hud-location');
+        if (p.z >= 24) {
+          locBadge.textContent = '📍 1ばんどうろ';
+        } else {
+          locBadge.textContent = '📍 マサラタウン';
+        }
+      }
+
+      checkInteraction() {
+        const p = gameState.player;
+        let checkX = Math.round(p.x);
+        let checkZ = Math.round(p.z);
+
+        if (p.dir === 'up') checkZ -= 1;
+        if (p.dir === 'down') checkZ += 1;
+        if (p.dir === 'left') checkX -= 1;
+        if (p.dir === 'right') checkX += 1;
+
+        for (const item of this.interactables) {
+          if (item.x === checkX && item.z === checkZ) {
+            item.action();
+            return;
+          }
+        }
+      }
+
+      /* ==========================================================================
+         7. DIALOG & MENU SYSTEM
+         ========================================================================== */
+      showDialog(text, onComplete = null) {
+        this.setMode('DIALOG');
+        this.dialogQueue = text.split('\n\n');
+        this.dialogIndex = 0;
+        this.dialogCallback = onComplete;
+        this.renderDialogPage();
+      }
+
+      renderDialogPage() {
+        const box = document.getElementById('dialog-box');
+        const txt = document.getElementById('dialog-text');
+        const arrow = document.getElementById('dialog-arrow');
+
+        box.style.display = 'block';
+        txt.textContent = this.dialogQueue[this.dialogIndex];
+        arrow.style.display = 'block';
+      }
+
+      advanceDialog() {
+        this.dialogIndex++;
+        if (this.dialogIndex < this.dialogQueue.length) {
+          sound.sfxSelect();
+          this.renderDialogPage();
+        } else {
+          sound.sfxConfirm();
+          document.getElementById('dialog-box').style.display = 'none';
+          this.setMode('FIELD');
+          if (this.dialogCallback) this.dialogCallback();
+        }
+      }
+
+      toggleMenu(forceState) {
+        const menu = document.getElementById('start-menu');
+        const shouldShow = forceState !== undefined ? forceState : (gameState.mode !== 'MENU');
+
+        if (shouldShow) {
+          sound.sfxSelect();
+          this.setMode('MENU');
+          menu.style.display = 'block';
+        } else {
+          sound.sfxCancel();
+          menu.style.display = 'none';
+          this.setMode('FIELD');
+        }
+      }
+
+      initUI() {
+        // Start Menu Item Clicks
+        document.querySelectorAll('.menu-item').forEach(item => {
+          item.addEventListener('click', (e) => {
+            const action = item.dataset.action;
+            if (action === 'close') {
+              this.toggleMenu(false);
+            } else if (action === 'pokemon') {
+              this.openPokemonModal();
+            } else if (action === 'bag') {
+              this.showDialog(`【バッグ】\n・モンスターボール: ${gameState.player.items.balls}こ\n・キズぐすり: ${gameState.player.items.potions}こ`);
+              document.getElementById('start-menu').style.display = 'none';
+            } else if (action === 'save') {
+              localStorage.setItem('pokemon_red_3d_save', JSON.stringify({
+                player: gameState.player
+              }));
+              this.showToast('レポートを しっかり かき残した！');
+              this.toggleMenu(false);
+            }
+          });
+        });
+
+        // Battle Buttons
+        document.getElementById('btn-fight').addEventListener('click', () => this.showMovesMenu(true));
+        document.getElementById('btn-bag').addEventListener('click', () => this.useBattleBag());
+        document.getElementById('btn-pkmn').addEventListener('click', () => this.openPokemonModal());
+        document.getElementById('btn-run').addEventListener('click', () => this.runFromBattle());
+
+        // Move Clicks
+        for (let i = 0; i < 3; i++) {
+          document.getElementById(`btn-move-${i}`).addEventListener('click', () => {
+            this.executePlayerMove(i);
+          });
+        }
+        document.getElementById('btn-move-3').addEventListener('click', () => {
+          this.showMovesMenu(false);
+        });
+      }
+
+      openPokemonModal() {
+        const modal = document.getElementById('pokemon-modal');
+        const list = document.getElementById('pokemon-list-content');
+        list.innerHTML = '';
+
+        gameState.player.pokemon.forEach(pk => {
+          const card = document.createElement('div');
+          card.className = 'pkmn-card';
+          card.innerHTML = `
+            <div>
+              <strong>${pk.name}</strong> <span style="color:#c42828;">Lv.${pk.level}</span><br>
+              <small>タイプ: ${pk.type}</small>
+            </div>
+            <div style="text-align:right;">
+              HP: ${pk.currentHp} / ${pk.maxHp}<br>
+              EXP: ${pk.exp || 0}
+            </div>
+          `;
+          list.appendChild(card);
+        });
+
+        modal.style.display = 'block';
+      }
+
+      showToast(msg) {
+        const toast = document.getElementById('toast');
+        toast.textContent = msg;
+        toast.style.opacity = '1';
+        setTimeout(() => {
+          toast.style.opacity = '0';
+        }, 2200);
+      }
+
+      setMode(m) {
+        gameState.mode = m;
+      }
+
+      /* ==========================================================================
+         8. BATTLE SYSTEM
+         ========================================================================== */
+      triggerWildBattle() {
+        this.setMode('BATTLE');
+        gameState.battle.active = true;
+        sound.stopBgm();
+        sound.sfxEncounter();
+
+        // Screen Flash FX
+        const flash = document.getElementById('screen-flash');
+        flash.style.opacity = '1';
+        setTimeout(() => { flash.style.opacity = '0'; }, 100);
+        setTimeout(() => { flash.style.opacity = '1'; }, 200);
+        setTimeout(() => { flash.style.opacity = '0'; }, 350);
+
+        // Pick Wild Pokemon
+        const roll = Math.random();
+        let speciesKey = 'pidgey';
+        if (roll < 0.45) speciesKey = 'pidgey';
+        else if (roll < 0.85) speciesKey = 'rattata';
+        else speciesKey = 'pikachu';
+
+        const base = POKEMON_DATABASE[speciesKey];
+        const wild = {
+          ...base,
+          currentHp: base.maxHp
+        };
+
+        gameState.battle.enemy = wild;
+        gameState.battle.playerPkmn = gameState.player.pokemon[0];
+
+        // Replace 3D enemy model
+        while (this.enemySlot.children.length > 0) {
+          this.enemySlot.remove(this.enemySlot.children[0]);
+        }
+        let enemyMesh;
+        if (speciesKey === 'pidgey') enemyMesh = ModelFactory.createPidgey();
+        else if (speciesKey === 'rattata') enemyMesh = ModelFactory.createRattata();
+        else enemyMesh = ModelFactory.createPikachu();
+        this.enemySlot.add(enemyMesh);
+
+        // Setup 3D camera for Battle View
+        this.fieldGroup.visible = false;
+        this.battleGroup.visible = true;
+
+        this.camera.position.set(-6, 3.5, 5);
+        this.camera.lookAt(0, 1.2, -2.5);
+
+        // Setup Battle UI
+        document.getElementById('battle-ui').style.display = 'flex';
+        document.getElementById('field-overlay').style.display = 'none';
+
+        document.getElementById('enemy-name').textContent = wild.name;
+        document.getElementById('enemy-level').textContent = `Lv.${wild.level}`;
+        this.updateHpBars();
+
+        document.getElementById('battle-log').textContent = `あ！ やせいの ${wild.name} が とびだしてきた！`;
+        this.showMovesMenu(false);
+
+        setTimeout(() => {
+          sound.startBgm('battle');
+        }, 600);
+      }
+
+      updateHpBars() {
+        const e = gameState.battle.enemy;
+        const p = gameState.battle.playerPkmn;
+
+        if (e) {
+          const ePct = Math.max(0, Math.min(100, (e.currentHp / e.maxHp) * 100));
+          const eBar = document.getElementById('enemy-hp-bar');
+          eBar.style.width = `${ePct}%`;
+          eBar.style.background = ePct < 25 ? '#e74c3c' : (ePct < 50 ? '#f39c12' : '#2ecc71');
+        }
+
+        if (p) {
+          const pPct = Math.max(0, Math.min(100, (p.currentHp / p.maxHp) * 100));
+          const pBar = document.getElementById('player-hp-bar');
+          pBar.style.width = `${pPct}%`;
+          pBar.style.background = pPct < 25 ? '#e74c3c' : (pPct < 50 ? '#f39c12' : '#2ecc71');
+          document.getElementById('player-hp-text').textContent = `${p.currentHp} / ${p.maxHp}`;
+          document.getElementById('player-pkmn-name').textContent = p.name;
+          document.getElementById('player-pkmn-level').textContent = `Lv.${p.level}`;
+        }
+      }
+
+      showMovesMenu(show) {
+        sound.sfxSelect();
+        document.getElementById('battle-actions').style.display = show ? 'none' : 'grid';
+        document.getElementById('battle-moves').style.display = show ? 'grid' : 'none';
+
+        if (show) {
+          const moves = gameState.battle.playerPkmn.moves;
+          for (let i = 0; i < 3; i++) {
+            const btn = document.getElementById(`btn-move-${i}`);
+            if (moves[i]) {
+              btn.querySelector('.move-name').textContent = moves[i].name;
+              btn.querySelector('.move-pp').textContent = `PP ${moves[i].pp}/${moves[i].maxPp}`;
+              btn.style.visibility = 'visible';
+            } else {
+              btn.style.visibility = 'hidden';
+            }
+          }
+        }
+      }
+
+      executePlayerMove(moveIdx) {
+        const p = gameState.battle.playerPkmn;
+        const e = gameState.battle.enemy;
+        const move = p.moves[moveIdx];
+
+        if (!move || move.pp <= 0) {
+          sound.sfxCancel();
+          return;
+        }
+
+        move.pp--;
+        this.showMovesMenu(false);
+        document.getElementById('battle-log').textContent = `${p.name} の ${move.name}！`;
+
+        // Attack Animation & SFX
+        if (move.name === 'ひのこ') {
+          sound.sfxEmber();
+        } else {
+          sound.sfxHit();
+        }
+
+        // Damage Calculation
+        const damage = Math.max(4, Math.floor(move.power * 0.75 + Math.random() * 4));
+        e.currentHp = Math.max(0, e.currentHp - damage);
+
+        // Shake enemy model
+        const origX = this.enemySlot.position.x;
+        let shakeCount = 0;
+        const shakeInterval = setInterval(() => {
+          this.enemySlot.position.x = origX + (Math.random() - 0.5) * 0.4;
+          shakeCount++;
+          if (shakeCount > 6) {
+            clearInterval(shakeInterval);
+            this.enemySlot.position.x = origX;
+            this.updateHpBars();
+
+            if (e.currentHp <= 0) {
+              this.handleEnemyFaint();
+            } else {
+              setTimeout(() => this.executeEnemyTurn(), 1000);
+            }
+          }
+        }, 50);
+      }
+
+      executeEnemyTurn() {
+        const p = gameState.battle.playerPkmn;
+        const e = gameState.battle.enemy;
+
+        const move = e.moves[Math.floor(Math.random() * e.moves.length)];
+        document.getElementById('battle-log').textContent = `やせいの ${e.name} の ${move.name}！`;
+        sound.sfxHit();
+
+        const damage = Math.max(3, Math.floor(move.power * 0.6 + Math.random() * 3));
+        p.currentHp = Math.max(0, p.currentHp - damage);
+
+        // Shake player Pokemon
+        const origX = this.battlePlayerPkmn.position.x;
+        let shakeCount = 0;
+        const shakeInterval = setInterval(() => {
+          this.battlePlayerPkmn.position.x = origX + (Math.random() - 0.5) * 0.3;
+          shakeCount++;
+          if (shakeCount > 6) {
+            clearInterval(shakeInterval);
+            this.battlePlayerPkmn.position.x = origX;
+            this.updateHpBars();
+
+            if (p.currentHp <= 0) {
+              this.handlePlayerFaint();
+            } else {
+              setTimeout(() => {
+                document.getElementById('battle-log').textContent = `どうする？`;
+              }, 800);
+            }
+          }
+        }, 50);
+      }
+
+      useBattleBag() {
+        sound.sfxSelect();
+        if (gameState.player.items.balls <= 0) {
+          document.getElementById('battle-log').textContent = `モンスターボール が ない！`;
+          return;
+        }
+
+        gameState.player.items.balls--;
+        document.getElementById('hud-balls').textContent = `⚪ モンスターボール: ${gameState.player.items.balls}個`;
+        document.getElementById('battle-log').textContent = `レッドは モンスターボール を なげた！`;
+
+        // Throw Ball Animation
+        this.pokeballMesh.visible = true;
+        this.pokeballMesh.position.set(-2.5, 1, 0.5);
+        let progress = 0;
+
+        const throwInterval = setInterval(() => {
+          progress += 0.08;
+          const px = -2.5 + (3.8 - -2.5) * progress;
+          const pz = 0.5 + (-6 - 0.5) * progress;
+          const py = 1 + Math.sin(progress * Math.PI) * 2.5;
+
+          this.pokeballMesh.position.set(px, py, pz);
+          this.pokeballMesh.rotation.x += 0.3;
+          this.pokeballMesh.rotation.z += 0.2;
+
+          if (progress >= 1) {
+            clearInterval(throwInterval);
+            this.enemySlot.visible = false;
+            sound.sfxHit();
+
+            // Ball Wiggle check
+            let shakes = 0;
+            const wiggleInterval = setInterval(() => {
+              shakes++;
+              sound.sfxSelect();
+              this.pokeballMesh.rotation.z = (shakes % 2 === 0 ? 0.35 : -0.35);
+
+              if (shakes >= 3) {
+                clearInterval(wiggleInterval);
+                this.pokeballMesh.rotation.z = 0;
+
+                // Capture Success!
+                sound.sfxCatchSuccess();
+                const caught = gameState.battle.enemy;
+                document.getElementById('battle-log').textContent = `やったー！ ${caught.name} を つかまえたぞ！`;
+                gameState.player.pokemon.push(caught);
+
+                setTimeout(() => {
+                  this.endBattle();
+                }, 2200);
+              }
+            }, 600);
+          }
+        }, 30);
+      }
+
+      handleEnemyFaint() {
+        sound.sfxLevelUp();
+        this.enemySlot.visible = false;
+        const e = gameState.battle.enemy;
+        const p = gameState.battle.playerPkmn;
+        const expGain = e.expReward || 25;
+
+        p.exp = (p.exp || 0) + expGain;
+        document.getElementById('battle-log').textContent = `やせいの ${e.name} は たおれた！\n${p.name} は ${expGain} けいけんち を えた！`;
+
+        if (p.exp >= p.nextExp) {
+          p.level++;
+          p.maxHp += 3;
+          p.currentHp = p.maxHp;
+          p.exp -= p.nextExp;
+          p.nextExp = Math.floor(p.nextExp * 1.5);
+          setTimeout(() => {
+            sound.sfxLevelUp();
+            document.getElementById('battle-log').textContent = `${p.name} は レベル ${p.level} に あがった！`;
+            this.updateHpBars();
+            setTimeout(() => this.endBattle(), 2000);
+          }, 1500);
+        } else {
+          setTimeout(() => this.endBattle(), 2000);
+        }
+      }
+
+      handlePlayerFaint() {
+        sound.sfxCancel();
+        document.getElementById('battle-log').textContent = `${gameState.battle.playerPkmn.name} は たおれた！\nめのまえが まっくら になった...`;
+        setTimeout(() => {
+          gameState.player.x = 8;
+          gameState.player.z = 14;
+          gameState.player.targetX = 8;
+          gameState.player.targetZ = 14;
+          gameState.player.pokemon[0].currentHp = gameState.player.pokemon[0].maxHp;
+          this.endBattle();
+          this.showDialog('ママ「レッド！ だいじょうぶ！？\nむり を しちゃ ダメよ！」\n（ポケモンが かいふくした！）');
+        }, 2200);
+      }
+
+      runFromBattle() {
+        sound.sfxConfirm();
+        document.getElementById('battle-log').textContent = `うまく にげきれた！`;
+        setTimeout(() => {
+          this.endBattle();
+        }, 800);
+      }
+
+      endBattle() {
+        this.pokeballMesh.visible = false;
+        this.enemySlot.visible = true;
+        this.battleGroup.visible = false;
+        this.fieldGroup.visible = true;
+
+        document.getElementById('battle-ui').style.display = 'none';
+        document.getElementById('field-overlay').style.display = 'block';
+
+        this.setMode('FIELD');
+        sound.stopBgm();
+        sound.startBgm('town');
+      }
+
+      /* ==========================================================================
+         9. MAIN RENDER LOOP
+         ========================================================================== */
+      render(time) {
+        requestAnimationFrame(this.render.bind(this));
+
+        const dt = Math.min(0.1, (time - this.lastTime) / 1000);
+        this.lastTime = time;
+
+        this.updatePlayer(dt);
+
+        if (this.battlePlayerPkmn && this.battlePlayerPkmn.userData.flame) {
+          const fl = this.battlePlayerPkmn.userData.flame;
+          const s = 1 + Math.sin(time * 0.01) * 0.2;
+          fl.scale.set(s, s, s);
+        }
+
+        this.renderer.render(this.scene, this.camera);
+      }
+    }
+
+    window.addEventListener('load', () => {
+      window.gameApp = new GameApp();
+    });
+  </script>
+</body>
+</html>
